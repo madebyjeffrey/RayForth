@@ -1,0 +1,5 @@
+\form#0:$ r(t) = \vec e + t \vec d $
+\form#1:$ s $
+\form#2:$ \vec c $
+\form#3:$ R $
+\form#4:\[ t = \frac{-\vec d \cdot (\vec e - \vec c) \pm \sqrt{(\vec d \cdot (\vec e - \vec c))^2 - (\vec d \cdot \vec d)((\vec e - \vec c) \cdot (\vec e - \vec c) - R^2)}}{\vec d \cdot \vec d} \]
