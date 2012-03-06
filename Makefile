@@ -8,7 +8,7 @@ default_target: all
 #=============================================================================
 # Special targets provided by cmake.
 
-# Disable implicit rules so canoncical targets will work.
+# Disable implicit rules so canonical targets will work.
 .SUFFIXES:
 
 # Remove some rules from gmake that .SUFFIXES does not remove.
@@ -159,29 +159,29 @@ src/lodepng.cpp.s:
 	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/lodepng.cpp.s
 .PHONY : src/lodepng.cpp.s
 
-src/ray.o: src/ray.cpp.o
-.PHONY : src/ray.o
+src/main.o: src/main.cpp.o
+.PHONY : src/main.o
 
 # target to build an object file
-src/ray.cpp.o:
-	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/ray.cpp.o
-.PHONY : src/ray.cpp.o
+src/main.cpp.o:
+	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
 
-src/ray.i: src/ray.cpp.i
-.PHONY : src/ray.i
+src/main.i: src/main.cpp.i
+.PHONY : src/main.i
 
 # target to preprocess a source file
-src/ray.cpp.i:
-	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/ray.cpp.i
-.PHONY : src/ray.cpp.i
+src/main.cpp.i:
+	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
 
-src/ray.s: src/ray.cpp.s
-.PHONY : src/ray.s
+src/main.s: src/main.cpp.s
+.PHONY : src/main.s
 
 # target to generate assembly for a file
-src/ray.cpp.s:
-	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/ray.cpp.s
-.PHONY : src/ray.cpp.s
+src/main.cpp.s:
+	$(MAKE) -f CMakeFiles/ray.dir/build.make CMakeFiles/ray.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
 
 # Help Target
 help:
@@ -198,9 +198,9 @@ help:
 	@echo "... src/lodepng.o"
 	@echo "... src/lodepng.i"
 	@echo "... src/lodepng.s"
-	@echo "... src/ray.o"
-	@echo "... src/ray.i"
-	@echo "... src/ray.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
 .PHONY : help
 
 
