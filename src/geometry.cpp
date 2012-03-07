@@ -6,6 +6,8 @@
 #include "geometry.hpp"
 #include "linear_algebra.hpp"
 
+namespace Object
+{
 
 /// Calculates the intersection between a Ray and a Sphere
 /// Calculates the intersection with a Ray \f$ r(t) = \vec e + t \vec d \f$ and a 
@@ -67,9 +69,41 @@ auto test_intersection(Sphere s, Ray r) -> MaybeIntersection
     
     return nullIntersection();
 }
-/*
+
 auto test_intersection(Triangle s, Ray r) -> MaybeIntersection
 {
+    using namespace Math;
+    using namespace std;
+    
+    Vec3 a = get<0>(s);
+    Vec3 b = get<1>(s);
+    Vec3 c = get<2>(s);
+    
+    Vec3 e = get<0>(r);
+    Vec3 d = get<1>(r);
+    
+    // Basis vectors for triangle
+    Vec3 ab = (b - a);
+    Vec3 ac = (c - a);  
+    
+    // Triangle normal
+    Vec3 n = cross(ab, ac);
+    
+    float t = -dot(n, e) / dot(n, d - a);
+    Vec3 p = e - t * d;
+    Vec3 ap = p - a;
+    
+    float gamma = dot(ap, ac) / dot(ac, ac);
+    float beta = dot(ap, ab) / dot(ab, ab);
+    
+    if (beta + gamma <= 1.0)
+    {
+        float theta = acos(dot(d, n)) / (norm(d) * norm(n));
+
+        return justIntersection(makeIntersection(p, theta));
+    }
     
     return nullIntersection();   
-} */
+} 
+
+}

@@ -1,8 +1,53 @@
 
 #include <iostream>
 #include <string>
+#include <limits>
+#include <cmath>
+#include <iomanip>
 
 #include "linear_algebra.hpp"
+#include <assert.h>
+
+const float epsilon = 10e-6f;
+
+// Usable AlmostEqual function
+bool AlmostEqual2sComplement(float A, float B, int maxUlps)
+{
+	// Make sure maxUlps is non-negative and small enough that the
+	// default NAN won't compare as equal to anything.
+	assert(maxUlps > 0 && maxUlps < 4 * 1024 * 1024);
+	int aInt = *(int*)&A;
+	// Make aInt lexicographically ordered as a twos-complement int
+	if (aInt < 0)
+		aInt = 0x80000000 - aInt;
+	// Make bInt lexicographically ordered as a twos-complement int
+	int bInt = *(int*)&B;
+	if (bInt < 0)
+		bInt = 0x80000000 - bInt;
+	int intDiff = abs(aInt - bInt);
+	if (intDiff <= maxUlps)
+		return true;
+	return false;
+}
+
+bool fcomp(float const a, float const b)
+{
+	return AlmostEqual2sComplement(a, b, 1);
+}
+
+#if 0
+
+template<class T>
+typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
+feq(T const a, T const b)
+{
+	const int ulp = 2;
+	return (std::abs(a - b) <= std::numeric_limits<T>::epsilon()
+						*  std::max(std::abs(a), std::abs(b))
+						*  ulp);
+}
+
+#endif
 
 bool subtract()
 {
@@ -12,7 +57,7 @@ bool subtract()
 	Vec3 B = { 5.f, 4.f, 3.f };
 	Vec3 C = A - B;
 
-	return (C[0] == 0.f	and C[1] == 0.f and C[2] == 0.f);
+	return feq(C[0], 0.f) and feq(C[1], 0.f) and feq(C[2], 0.f);
 }
 
 bool add()
@@ -22,7 +67,7 @@ bool add()
 	Vec3 B = { -5.f, -4.f, -3.f };
 	Vec3 C = A + B;
 
-	return (C[0] == 0.f	and C[1] == 0.f and C[2] == 0.f);
+	return feq(C[0], 0.f) and feq(C[1], 0.f) and feq(C[2], 0.f);
 }
 
 bool dot()
@@ -32,7 +77,7 @@ bool dot()
 	Vec3 B = { 1.f, 5.f, 10.f };
 	float C = dot(A, B);
 	
-	return (C == 41.0f);
+	return feq(C, 41.0f);
 }
 
 bool dot2()
@@ -42,7 +87,7 @@ bool dot2()
 	
 	float C = dot(A, A);
 	
-	return (C == 14.0f);
+	return feq(C, 14.0f);
 }	
 
 bool dot3()
@@ -51,9 +96,9 @@ bool dot3()
 	Vec3 A = { .1f, .2f, .3f };
 	
 	float C = dot(A, A);
-	std::cout << "Dot3: " << C << std::endl;
+//	std::cout << "Dot3: " << C << std::endl;
 	
-	return (C == 0.14f);
+	return feq(C, 0.14f);
 }	
 
 bool distance()
@@ -63,7 +108,7 @@ bool distance()
 	Vec3 B = { 4.0f, 0.0f, 0.0f };
 	float C = distance(A, B);
 	
-	return (C == 5.0f);	
+	return feq(C, 5.0f);	
 }
 
 bool equal()
@@ -94,19 +139,19 @@ bool length()
 	
 //	std::cout << "A: " << A << std::endl;
 //	std::cout << std::endl << length(A) << std::endl;
-	return (norm(A) == 5.0f);
+	return feq(norm(A), 5.0f);
 }
 
 bool unit()
 {
 	using namespace Math;
 	Vec3 A = { 3.0f, 4.0f, 5.0f};
-	Vec3 uA = unit(A);
+//	Vec3 uA = unit(A);
 	
-	std::cout << "A: " << A << std::endl;
-	std::cout << "unit A: " << uA << std::endl;
-	std::cout << "length unit A: " << dot(uA, uA) << std::endl;
-	return (norm(unit(A)) == 1.0f);
+	//std::cout << "A: " << A << std::endl;
+	//std::cout << "unit A: " << uA << std::endl;
+	//std::cout << "length unit A: " << dot(uA, uA) << std::endl;
+	return feq(norm(unit(A)), 1.0f);
 }
 
 bool scalar_multiply()
@@ -116,7 +161,7 @@ bool scalar_multiply()
 	Vec3 A = { 5.f, 4.f, 3.f };
 	Vec3 C = A * 2.0f;
 	
-	return (C[0] == 10.f and C[1] == 8.f and C[2] == 6.f);
+	return feq(C[0], 10.f) and feq(C[1], 8.f) and feq(C[2], 6.f);
 }
 
 bool scalar_multiply2()
@@ -126,7 +171,7 @@ bool scalar_multiply2()
 	Vec3 A = { 5.f, 4.f, 3.f };
 	Vec3 C = 2.0f * A;
 
-	return (C[0] == 10.f and C[1] == 8.f and C[2] == 6.f);
+	return feq(C[0], 10.f) and feq(C[1], 8.f) and feq(C[2], 6.f);
 }
 
 bool scalar_divide()
@@ -136,14 +181,14 @@ bool scalar_divide()
 	Vec3 A = { 5.f, 4.f, 3.f };
 	Vec3 C = A / 2.0f;
 
-	return (C[0] == 2.5f and C[1] == 2.f and C[2] == 1.5f);
+	return feq(C[0], 2.5f) and feq(C[1], 2.f) and feq(C[2], 1.5f);
 }
 
 void test(bool (*func)(), std::string const name)
 {
 	using namespace std;
 	
-	cout << "Running " << name << " : " << ((func() == true) ? "ok" : "fail") << endl;
+	cout << "Running " << setw(50) << name << " : " << ((func() == true) ? "ok" : "fail") << endl;
 }
 
 int main(int argc, char**argv)

@@ -5,7 +5,7 @@
 
 namespace Math
 {
-	auto vec3(float a, float b, float c) -> Vec3;
+	auto vec3(float a, float b, float c) -> Vec3
 	{
 		Vec3 A; // { a, b, c };
 		A[0] = a;
