@@ -83,21 +83,34 @@ auto test_intersection(Triangle s, Ray r) -> MaybeIntersection
     Vec3 d = get<1>(r);
     
     // Basis vectors for triangle
-    Vec3 ab = (b - a);
-    Vec3 ac = (c - a);  
+    Vec3 u = (b - a);
+    Vec3 v = (c - a);  
+    Vec3 w = ((e+d) - a);
     
     // Triangle normal
-    Vec3 n = cross(ab, ac);
+    Vec3 n = cross(u, v);
     
-    float t = -dot(n, e) / dot(n, d - a);
-    Vec3 p = e - t * d;
-    Vec3 ap = p - a;
+//    float t = dot(n, a - e) / dot(n, d);
+    float t = dot(n, a - e) / dot(n, d);
     
-    float gamma = dot(ap, ac) / dot(ac, ac);
-    float beta = dot(ap, ab) / dot(ab, ab);
+    float sigma = dot(w, cross(n, v)) / dot(u, cross(n, v));
+    float tau  = dot(w, cross(n, u)) / dot(v, cross(n, u));
     
-    if (beta + gamma <= 1.0)
+//    float beta = dot(u, v) * dot(w, v) - dot(v,v)*dot(w, u);
+//    float gamma = dot(u, v) * dot(w, u) - dot(u,u)*dot(w, v);
+//    float divisor = pow(dot(u, v), 2) - dot(u, u) * dot(v, v);
+//    beta /= divisor;
+//    gamma /= divisor;
+    
+    
+
+//    Vec3 ap = p - a;  
+//    if (beta + gamma <= 1.0)
+    if ((sigma >= 0) and (tau >= 0) and (sigma + tau <= 1.0))
     {
+    //if (sigma + tau <= 1.0)
+//    {
+        Vec3 p = e - t * d;
         float theta = acos(dot(d, n)) / (norm(d) * norm(n));
 
         return justIntersection(makeIntersection(p, theta));

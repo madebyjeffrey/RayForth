@@ -50,6 +50,11 @@ namespace Object
         return std::make_tuple(centre, radius);
     }
     
+    inline auto makeTriangle(Math::Vec3 A, Math::Vec3 B, Math::Vec3 C) -> Triangle
+    {
+        return std::make_tuple(A, B, C);
+    }
+    
     inline auto makeRay(Math::Vec3 origin, Math::Vec3 direction) -> Ray
     {
         return std::make_tuple(origin, direction);
@@ -59,36 +64,45 @@ namespace Object
     inline auto intersection_colour(MaybeIntersection i) -> std::array<uint8_t, 3>
     {
         std::array<uint8_t, 3> colour = { 0x00, 0xff, 0xff };
-        return colour;
         
         if (i == nullIntersection())
         {
-            colour[0] = 0; colour[1] = 0xff; colour[2] = 0;
+            colour[0] = 0; colour[1] = 0x00; colour[2] = 0;
+        }
+        else
+        {
+
+           auto intersection = std::get<1>(i);
+           auto angle = std::get<1>(intersection);
+           float multiply = (angle - 3.14159f) / 3.14159f;
+        
+           uint8_t c = static_cast<uint8_t>(255.0f * multiply);
+           
+           colour[0] = c; colour[1] = c; colour[2] = c;
+//            std::cerr << "Colour hit! " << colour << std::endl;
+        }
+        
+//        std::cerr << "Colour: " << colour << std::endl;
+        
+        return colour;
+   
+    }
+    
+    inline auto intersection_index(MaybeIntersection i) -> int
+    {
+//        std::array<uint8_t, 3> colour = { 0x00, 0xff, 0xff };
+//        return colour;
+
+        if (i == nullIntersection())
+        {
+            return 0;
+//            colour[0] = 0; colour[1] = 0x00; colour[2] = 0;
 //            colour = { 0, 0, 0 };
         }
         else
         {
-           auto intersection = std::get<1>(i);
-           //auto point = std::get<0>(intersection);
-           auto angle = std::get<1>(intersection);
-//           float multiply = (angle - 3.14159f) / 3.14159f;
-        
-//           uint8_t c = static_cast<uint8_t>(255.0f * multiply);
-//           uint32_t c2 = c | c << 8 | c << 16 | c << 24;
-
-//            colour = { c, c, c };
-            colour[0] = 0xff; colour[1] = 0; colour[2] = 0;
-
-           
-           //std::cout << angle << std::endl;
-//           return c2;
-//           return 0xffffffff;
+            return 1;
         }
-        
-        std::cerr << "Colour: " << colour << std::endl;
-        
-        return colour;
-   
     }
     /**!
         Calculates the intersection between a Ray and a Sphere
