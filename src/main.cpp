@@ -22,6 +22,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char const * const * const argv)
 {
+    /*
     using namespace std;
     using namespace boost::filesystem;
     
@@ -42,24 +43,19 @@ int main(int argc, char const * const * const argv)
             ("version,v", "displays version")
             ("input-file,i", po::value<string>(&ifile), "input file");
             cerr << "// 0"<< endl;
+
         po::variables_map vm;
-        cerr << "//0s" << endl;
-//        auto xx = po::parse_command_line(argc, argv, desc);
-        cerr << "//0b" << endl;
+
         po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
-//        po::store(xx, vm);
-        cerr << "// 1" << endl;
+
         po::notify(vm);
-        cerr << "// 2x" << endl;
-        return 0;
-        cerr << "// 2" << endl;            
+
         // has user asked for the version number?
         if (vm.count("version"))
         {
             cout << "RayForth A1" << endl;
             return 0;
         }
-        cerr << "// 3" << endl;
         // has user asked for parameter help?
         if (vm.count("help"))
         {
@@ -68,7 +64,6 @@ int main(int argc, char const * const * const argv)
             cout << desc << endl;
             return 0;
         }
-        cerr << "// 4" << endl;
         
         // has user given us an input file?
         if (vm.count("input-file"))
@@ -108,10 +103,10 @@ int main(int argc, char const * const * const argv)
     {
         delete input;
     }
+    */
     
     
     
-/*    
     
     std::cout << "Ray A1" << std::endl;
     
@@ -122,10 +117,10 @@ int main(int argc, char const * const * const argv)
     image.reserve(total);
     Math::Vec3 direction = Math::vec3(0, 0, 1.0);
     
-    auto object = Object::makeSphere(Math::vec3(0.5, 0.5, 0.5), 0.25);
-//    auto object = Object::makeTriangle(Math::vec3(0.45, 0.45, 0.5),
-//                                       Math::vec3(0.55, 0.45, 0.5),
-//                                       Math::vec3(0.65, 0.55, 0.5));
+//    auto object = Object::makeSphere(Math::vec3(0.5, 0.5, 0.5), 0.25);
+    auto object = Object::makeTriangle(Math::vec3(0.45, 0.45, 0.5),
+                                       Math::vec3(0.55, 0.45, 0.5),
+                                       Math::vec3(0.65, 0.55, 0.5));
     
     for (unsigned i = 0; i != total; ++i)
     {
@@ -187,7 +182,7 @@ int main(int argc, char const * const * const argv)
     gdImageDestroy(im3);
 
 
- */   
+  
     std::cout << std::endl;
  
     return 0;
