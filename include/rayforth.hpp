@@ -4,7 +4,7 @@
 
 #include <stack>
 
-namespace forth
+namespace Forth
 {
 	bool executeForth(std::istream &inp);	
 }

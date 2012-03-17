@@ -16,13 +16,15 @@
 
 #include "geometry.hpp"
 
+#include "rayforth.hpp"
+
 namespace po = boost::program_options;
 
 #include "gd.h"
 
 int main(int argc, char const * const * const argv)
 {
-    /*
+    
     using namespace std;
     using namespace boost::filesystem;
     
@@ -42,7 +44,6 @@ int main(int argc, char const * const * const argv)
             ("help,h", "display options")
             ("version,v", "displays version")
             ("input-file,i", po::value<string>(&ifile), "input file");
-            cerr << "// 0"<< endl;
 
         po::variables_map vm;
 
@@ -88,6 +89,11 @@ int main(int argc, char const * const * const argv)
                 return 1;
             }
         }
+        else
+        {
+            input = &cin;
+            prompt = true;
+        }
     }
     catch(exception& e) {
         cerr << e.what() << "\n";
@@ -98,15 +104,17 @@ int main(int argc, char const * const * const argv)
     }
     
     // process
+    Forth::executeForth(*input);
     
     if (input != &cin)
     {
         delete input;
     }
-    */
+    
+
     
     
-    
+    /*
     
     std::cout << "Ray A1" << std::endl;
     
@@ -182,7 +190,7 @@ int main(int argc, char const * const * const argv)
     gdImageDestroy(im3);
 
 
-  
+ */ 
     std::cout << std::endl;
  
     return 0;
