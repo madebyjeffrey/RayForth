@@ -4,98 +4,402 @@
 #include <stack>
 #include <stdexcept>
 #include <unordered_set>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <tuple>
+#include <list>
+#include <utility>
+#include <map>
 
-#include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
-//#include "TypedIterator.hpp"
 
 namespace Forth
 {
-	using MaybeToken = boost::optional<double>;
-	using MaybeDouble = boost::optional<double>;
+	// bool if no token,
+	// double if it is a double
+	using Token = boost::variant<bool, double>;
 	
-	MaybeDouble stonum(const std::string& str, size_t *pos = 0) noexcept
+	enum struct State
 	{
-		double result;
-		bool fail = false;
-		
-		try
-		{
-			result = std::stod(str, pos);
-		}
-		// We only try to catch the exceptions stod will throw
-		catch (std::invalid_argument)
-		{
-			fail = true;
-		}
-		catch (std::out_of_range)
-		{
-			fail = true;
-		}
+		neutral,
+		end,
+		sign, 
+		digit_sequence,
+		decimal_after_digits,
+		decimal_before_digits,
+		exponent,
+		digit_sequence_after_decimal,
+		exponent_sign,
+		exponent_digit_sequence,
+		fail
+	};
 	
-		return MaybeDouble(!fail, result);
+	std::map<State, std::string> names
+	{
+		{ 	State::neutral, "neutral" },
+		{	State::number,	"Number" },
+		{	State::sign, "sign" },
+		{	State::digit_sequence, "digit_sequence" },
+		{	State::decimal_after_digits, "decimal_after_digits" },
+		{	State::decimal_before_digits, "decimal_before_digits" },
+		{	State::exponent, "exponent" },
+		{	State::digit_sequence_after_decimal, "digit_sequence_after_decimal" },
+		{	State::exponent_sign,	"exponent_sign" },
+		{	State::exponent_digit_sequence, "exponent_digit_sequence" },
+		{	State::fail, "fail" }
+	};
+	
+	bool isDigit(char c)
+	{
+		return (c >= '0') & (c <= '9');
 	}
 	
-	auto is_whitespace = [](char c)
-	{ 
-		using namespace std;
-		
-		static unordered_set<char> whitespace {
-			' ', '\t' };
-			
-		return whitespace.find(c) != whitespace.end();
-	};
-	
-	auto is_not_whitespace = [](char c)
+	bool isSign(char c)
 	{
-		return !is_whitespace(c);
-	};
+		return (c == '+') | (c == '-');
+	}
 	
-	auto is_newline = [](char c)
+	bool isExponent(char c)
 	{
-		using namespace std;
-		
-		static unordered_set<char> newline {
-			'\n', '\r' };
+		return (c == 'e') | (c == 'E');
+	}
+	
+	bool isDecimal(char c)
+	{
+		return (c == '.');
+	}
+	
+	bool isSpace(char c) 
+	{
+		return (c == ' ');
+	}
 
-		return newline.find(c) != newline.end();
-	};		
-	
-	void drop_whitespace(std::istream &inp)
+	using Predicate = bool(*)(char);
+	using StateTransferList = std::map<Predicate, State>;
+//	using StateTransferList = std::list<StateTransfer>;
+	using TransferTable = std::map<State, StateTransferList>;
+
+	TransferTable table 
 	{
-		while (inp)
-			if (is_whitespace(inp.peek())) inp.get();
-			else return;
-	}
-	
-	MaybeToken nextToken(std::istream &inp, bool &newlined)
+		{ State::neutral, 
+			{	
+				{ isSign, State::sign },
+				{ isDigit, State::digit_sequence },
+				{ isDecimal, State::decimal_before_digits },
+				{ isSpace, State::neutral }
+			} },
+		{ State::sign, 
+			{
+				{ isDigit, State::digit_sequence },
+				{ isDecimal, State::decimal_before_digits }
+			} },
+		{ State::digit_sequence,
+			{
+				{ isDigit, State::digit_sequence },
+				{ isExponent, State::exponent },
+				{ isDecimal, State::decimal_after_digits },
+				{ isSpace, State::number }
+			} },
+		{ State::decimal_after_digits,
+			{
+				{ isDigit, State::digit_sequence_after_decimal },
+				{ isExponent, State::exponent },
+				{ isSpace, State::number }
+			} },
+		{ State::decimal_before_digits,
+			{	
+				{ isDigit, State::digit_sequence_after_decimal },
+				{ isExponent, State::exponent }
+			} },
+		{ State::digit_sequence_after_decimal,
+			{
+				{ isDigit, State::digit_sequence_after_decimal },
+				{ isExponent, State::exponent },
+				{ isSpace, State::number },
+			} },
+		{ State::exponent,
+			{
+				{ isSign, State::exponent_sign },
+				{ isDigit, State::exponent_digit_sequence }
+			} },
+		{ State::exponent_sign,
+			{
+				{ isDigit, State::exponent_digit_sequence }
+			} },
+		{ State::exponent_digit_sequence,
+			{
+				{ isDigit, State::exponent_digit_sequence },
+				{ isSpace, State::number }
+			} } };
+			
+	struct Parser
 	{
-		// change design to use getline?
+		TransferTable t;
+		State state = State::number_start;
+		std::string buffer = "";
+		size_t index = 0;
 		
-		using namespace std;
-		// eliminate whitespace prior
-		drop_whitespace(inp);
+		Parser(TransferTable t_) : t(t_) {};
 		
-		// make sure next character is not a newline
-		if (is_newline(inp.peek()))
+		Token operator()(char c)
 		{
-			newlined = true;
-			return MaybeToken(false, 0.0);
+			bool fail = true;
+			++index;
+			
+			std::cout << names.at(state) << " -> ";
+			
+			try
+			{
+				StateTransferList st = t.at(state);
+
+				for (auto i = begin(st); i != end(st); ++i)
+				{
+					if (i->first(c))
+					{	
+						state = ((*i).second);
+						buffer += c;
+						fail = false;
+						break;				// first match wins
+					}
+				}
+			}
+			
+			catch (std::out_of_range)
+			{
+				std::cout << "Inconsistent State at index " << 0 << std::endl;
+			}
+			
+			std::cout << names.at(state) << std::endl;
+			std::cout << " buffer: " << buffer << std::endl;
+
+			if (state == State::number)
+			{
+				double d = stod(buffer);
+				buffer = "";
+				state = State::number_start;
+				return d;
+			}
+
+			if (fail)
+			{
+//				return false;	
+				throw std::string("unfortunate.");
+			}
+			
+
+			return false;
 		}
+	};
 		
-		// skip over to the next space and copy the interveneing characters into buffer
-		string buf;
-		copy_if(inp.begin(), inp.end(), back_inserter(buf), is_not_whitespace);
+				
+	struct NumberEval
+	{
+		State state = State::number_start;
+		std::string buffer = "";
 		
-		// test for it being a double
-		MaybeDouble d = stonum(buf);
 		
-		if (!d)
+		Token operator()(char c)
 		{
-			return MaybeToken(false, d);
+			using namespace std;
+			
+			switch (state)
+			{
+				case State::number_start:
+					buffer = "";
+					
+					if (isSign(c))
+					{
+						buffer += c;
+						state = State::sign;
+					} else if (isDigit(c))
+					{
+						buffer += c;
+						state = State::digit_sequence;
+					} else if (c == '.')
+					{
+						buffer += c;
+						state = State::decimal_before_digits;
+					}else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					
+					cout << "number start, buffer: " << buffer << endl;
+					return false;
+				
+				case State::end:
+					// if we have reached this point, we have a decimal number
+					// here!
+				{	
+					if (buffer == "") return false;
+					double d = stod(buffer); // this can throw!
+					cout << "Have a double: " << d << endl;
+					buffer = "";
+					return d;
+				}
+				case State::sign:
+					if (isDigit(c))
+					{
+						buffer += c;
+						state = State::digit_sequence;
+					} else if (c == '.')
+					{
+						buffer += c;
+						state = State::decimal_before_digits;
+					}else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					cout << "sign, buffer: " << buffer << endl;
+					return false;		
+					
+				case State::digit_sequence:
+					if (isDigit(c))
+					{
+						buffer += c;
+						// keep state
+					} else if (c == '.')
+					{
+						buffer += c;
+						state = State::decimal_after_digits;
+					} else if (isExponent(c))
+					{
+						buffer += c;
+						state = State::exponent;
+					} else if (isspace(c))
+					{
+						// do not add to buffer
+						state = State::end;
+					}else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					cout << "digit_sequence, buffer: " << buffer << endl;		
+
+					return false;
+				
+				
+				case State::decimal_after_digits:
+					if (isDigit(c))
+					{
+						buffer += c;
+						state = State::digit_sequence_after_decimal;
+					} else if (isExponent(c))
+					{
+						buffer += c;
+						state = State::exponent;
+					} else if (isspace(c))
+					{
+						// do not add to buffer
+						state = State::end;
+					} else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					cout << "decimal_after_digits, buffer: " << buffer << endl;		
+					return false;					
+
+				
+				case State::decimal_before_digits:
+					if (isDigit(c))
+					{
+						buffer += c;
+						state = State::digit_sequence_after_decimal;
+					} else if (isExponent(c))
+					{
+						buffer += c;
+						state = State::exponent;
+					} /*else if (isspace(c))
+					{
+						// do not add to buffer
+						state = State::end;
+					} */else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					cout << "decimal_before_digits, buffer: " << buffer << endl;		
+					
+					return false;
+				
+				case State::exponent:
+					if (isDigit(c))
+					{
+						buffer += c;
+						state = State::exponent_digit_sequence;
+					} else if (isSign(c))
+					{
+						buffer += c;
+						state = State::exponent_sign;
+					}else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					cout << "exponent, buffer: " << buffer << endl;		
+					
+					return false;
+
+				
+				case State::digit_sequence_after_decimal:
+					if (isDigit(c))
+					{
+						buffer += c;
+						state = State::digit_sequence_after_decimal;
+					} else if (isExponent(c))
+					{
+						buffer += c;
+						state = State::exponent;
+					} else if (isspace(c))
+					{
+						// do not add to buffer
+						state = State::end;
+					} else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					cout << "digit_sequence_after_decimal, buffer: " << buffer << endl;		
+					
+					return false;
+				
+				case State::exponent_sign:
+					if (isDigit(c))
+					{
+						buffer += c;
+						state = State::exponent_digit_sequence;
+					}else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+					
+					cout << "exponent_sign, buffer: " << buffer << endl;		
+					return false;
+				
+				case State::exponent_digit_sequence:
+					if (isDigit(c))
+					{	
+						buffer += c;
+						state = State::exponent_digit_sequence;
+					} else if (isspace(c))
+					{
+						// do not add to buffer
+						state = State::end;
+					} else {
+						// nothing matched, ERROR
+						state = State::fail;
+					}
+
+					cout << "exponent_digit_sequence, buffer: " << buffer << endl;		
+					return false;
+					
+					
+				default:
+					state = State::fail;
+					cout << "fail state, buffer: " << buffer << endl;
+			}	
+			return true;
 		}
-		else return d;
-	}
+	};
 	
 	void printStack(std::stack<double> &s)
 	{
@@ -108,7 +412,40 @@ namespace Forth
 	{
 		using namespace std;
 		
-		cout << "ok." << endl;
+		
+		
+		string s;
+		getline(inp, s);
+
+		s += "  "; // some extra to flush out the State
+				
+		cout << "Parsing: >>" << s << "<<" << endl;
+		
+		list<Token> t;
+
+//		transform(begin(s), end(s), back_inserter(t), NumberEval());
+		transform(begin(s), end(s), back_inserter(t), Parser(table));
+		
+		list<Token> trimmed;
+		for (Token s : t)
+		{
+			if (s.which() != 0)
+			{
+				trimmed.push_back(s);
+			}
+		}
+		
+		cout << "tokens found:" << endl;
+		for (Token s : trimmed)
+		{
+			if (s.which() == 1)
+			{
+				cout << "Number: " << s.get<double>(s) << endl;
+			}
+		}
+				
+		
+	/*	cout << "ok." << endl;
 		
 		MaybeDouble d1;
 		double d;
@@ -125,7 +462,7 @@ namespace Forth
 			}
 			printStack(s);
 		}		
-		
+	*/	
 		return true;	
 	}
 }
