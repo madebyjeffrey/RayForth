@@ -13,18 +13,25 @@
 #include <map>
 
 #include <boost/variant.hpp>
+#include <boost/variant/get.hpp>
 
 
 namespace Forth
 {
+	//struct Symbol
+//	{
+//		std::string name;	
+//	};
 	// bool if no token,
 	// double if it is a double
-	using Token = boost::variant<bool, double>;
+
+
+	using Token = boost::variant<bool, double, std::string>; //, Symbol>;
 	
 	enum struct State
 	{
 		neutral,
-		end,
+		number,
 		sign, 
 		digit_sequence,
 		decimal_after_digits,
@@ -33,7 +40,19 @@ namespace Forth
 		digit_sequence_after_decimal,
 		exponent_sign,
 		exponent_digit_sequence,
-		fail
+		fail,
+		
+		// strings
+		string_start,
+		string_text,
+		string_escape,
+		string_escaped,
+		string,
+		
+		// symbols
+		//symbol_char,
+//		symbol,
+		
 	};
 	
 	std::map<State, std::string> names
@@ -48,7 +67,16 @@ namespace Forth
 		{	State::digit_sequence_after_decimal, "digit_sequence_after_decimal" },
 		{	State::exponent_sign,	"exponent_sign" },
 		{	State::exponent_digit_sequence, "exponent_digit_sequence" },
-		{	State::fail, "fail" }
+		{	State::fail, "fail" },
+		
+		{ 	State::string_start, "string_start" },
+		{	State::string_text, "string_text" },
+		{	State::string_escape, "string_escape" },
+		{	State::string_escaped, "string_escaped" },
+		{   State::string, "string" },
+		
+//		{	State::symbol_char, "symbol_char" },
+//		{	State::symbol, "symbol" },
 	};
 	
 	bool isDigit(char c)
@@ -75,10 +103,48 @@ namespace Forth
 	{
 		return (c == ' ');
 	}
-
+	
+	// is it a double quote?
+	bool isQuote(char c)
+	{
+		return (c == '\"');
+	}
+	
+	// is it printable, but not a backslash or double quote
+	bool isPrintableRestricted(char c)
+	{
+		return (c != '\\' && c != '\"' && (c >= 32 && c < 127));
+	}
+	
+	// is it printable, including backslash or double quote
+	bool isPrintable(char c)
+	{
+		return (c >= 32 && c < 127);
+	}
+	
+	bool isBackslash(char c)
+	{
+		return (c == '\\');
+	}
+	
+//	bool isPrintableButNotNumber(char c)
+//	{
+//		return (c >= 32 && c < '0') || (c > '9' && c < 127);
+//	}
+	
+/*	bool isNarrowPrintable(char c)
+	{
+		return isPrintable(c) && !isSign(c) && !isDigit(c) && !isQuote(c);
+//			&& !isDecimal(c);
+	}*/
+/*	
+	bool isNotDigitButPrintable(char c)
+	{
+		return isPrintable(c) && !isDigit(c);
+	}
+*/
 	using Predicate = bool(*)(char);
 	using StateTransferList = std::map<Predicate, State>;
-//	using StateTransferList = std::list<StateTransfer>;
 	using TransferTable = std::map<State, StateTransferList>;
 
 	TransferTable table 
@@ -88,7 +154,8 @@ namespace Forth
 				{ isSign, State::sign },
 				{ isDigit, State::digit_sequence },
 				{ isDecimal, State::decimal_before_digits },
-				{ isSpace, State::neutral }
+				{ isSpace, State::neutral },
+				{ isQuote, State::string_start }
 			} },
 		{ State::sign, 
 			{
@@ -132,12 +199,36 @@ namespace Forth
 			{
 				{ isDigit, State::exponent_digit_sequence },
 				{ isSpace, State::number }
-			} } };
+			} } ,
+			
+		// strings
+		{ State::string_start,
+			{
+				{ isPrintableRestricted, State::string_text },
+			 	{ isQuote, State::string }
+			} },
+		{ State::string_text,
+			{
+				{ isPrintableRestricted, State::string_text },
+				{ isBackslash, State::string_escape },
+				{ isQuote, State::string }
+			} },
+		{ State::string_escape,
+			{
+				{ isPrintable, State::string_escaped },
+			}},
+		{ State::string_escaped,
+			{
+				{ isBackslash, State::string_escape },
+				{ isPrintableRestricted, State::string_text },
+				{ isQuote, State::string }
+			}}
+		};
 			
 	struct Parser
 	{
 		TransferTable t;
-		State state = State::number_start;
+		State state = State::neutral;
 		std::string buffer = "";
 		size_t index = 0;
 		
@@ -168,7 +259,7 @@ namespace Forth
 			
 			catch (std::out_of_range)
 			{
-				std::cout << "Inconsistent State at index " << 0 << std::endl;
+				std::cout << "Inconsistent State at index " << index << std::endl;
 			}
 			
 			std::cout << names.at(state) << std::endl;
@@ -178,7 +269,15 @@ namespace Forth
 			{
 				double d = stod(buffer);
 				buffer = "";
-				state = State::number_start;
+				state = State::neutral;
+				return d;
+			}
+			
+			if (state == State::string)
+			{
+				std::string d = buffer;
+				buffer = "";
+				state = State::neutral;
 				return d;
 			}
 
@@ -194,212 +293,6 @@ namespace Forth
 	};
 		
 				
-	struct NumberEval
-	{
-		State state = State::number_start;
-		std::string buffer = "";
-		
-		
-		Token operator()(char c)
-		{
-			using namespace std;
-			
-			switch (state)
-			{
-				case State::number_start:
-					buffer = "";
-					
-					if (isSign(c))
-					{
-						buffer += c;
-						state = State::sign;
-					} else if (isDigit(c))
-					{
-						buffer += c;
-						state = State::digit_sequence;
-					} else if (c == '.')
-					{
-						buffer += c;
-						state = State::decimal_before_digits;
-					}else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					
-					cout << "number start, buffer: " << buffer << endl;
-					return false;
-				
-				case State::end:
-					// if we have reached this point, we have a decimal number
-					// here!
-				{	
-					if (buffer == "") return false;
-					double d = stod(buffer); // this can throw!
-					cout << "Have a double: " << d << endl;
-					buffer = "";
-					return d;
-				}
-				case State::sign:
-					if (isDigit(c))
-					{
-						buffer += c;
-						state = State::digit_sequence;
-					} else if (c == '.')
-					{
-						buffer += c;
-						state = State::decimal_before_digits;
-					}else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					cout << "sign, buffer: " << buffer << endl;
-					return false;		
-					
-				case State::digit_sequence:
-					if (isDigit(c))
-					{
-						buffer += c;
-						// keep state
-					} else if (c == '.')
-					{
-						buffer += c;
-						state = State::decimal_after_digits;
-					} else if (isExponent(c))
-					{
-						buffer += c;
-						state = State::exponent;
-					} else if (isspace(c))
-					{
-						// do not add to buffer
-						state = State::end;
-					}else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					cout << "digit_sequence, buffer: " << buffer << endl;		
-
-					return false;
-				
-				
-				case State::decimal_after_digits:
-					if (isDigit(c))
-					{
-						buffer += c;
-						state = State::digit_sequence_after_decimal;
-					} else if (isExponent(c))
-					{
-						buffer += c;
-						state = State::exponent;
-					} else if (isspace(c))
-					{
-						// do not add to buffer
-						state = State::end;
-					} else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					cout << "decimal_after_digits, buffer: " << buffer << endl;		
-					return false;					
-
-				
-				case State::decimal_before_digits:
-					if (isDigit(c))
-					{
-						buffer += c;
-						state = State::digit_sequence_after_decimal;
-					} else if (isExponent(c))
-					{
-						buffer += c;
-						state = State::exponent;
-					} /*else if (isspace(c))
-					{
-						// do not add to buffer
-						state = State::end;
-					} */else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					cout << "decimal_before_digits, buffer: " << buffer << endl;		
-					
-					return false;
-				
-				case State::exponent:
-					if (isDigit(c))
-					{
-						buffer += c;
-						state = State::exponent_digit_sequence;
-					} else if (isSign(c))
-					{
-						buffer += c;
-						state = State::exponent_sign;
-					}else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					cout << "exponent, buffer: " << buffer << endl;		
-					
-					return false;
-
-				
-				case State::digit_sequence_after_decimal:
-					if (isDigit(c))
-					{
-						buffer += c;
-						state = State::digit_sequence_after_decimal;
-					} else if (isExponent(c))
-					{
-						buffer += c;
-						state = State::exponent;
-					} else if (isspace(c))
-					{
-						// do not add to buffer
-						state = State::end;
-					} else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					cout << "digit_sequence_after_decimal, buffer: " << buffer << endl;		
-					
-					return false;
-				
-				case State::exponent_sign:
-					if (isDigit(c))
-					{
-						buffer += c;
-						state = State::exponent_digit_sequence;
-					}else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-					
-					cout << "exponent_sign, buffer: " << buffer << endl;		
-					return false;
-				
-				case State::exponent_digit_sequence:
-					if (isDigit(c))
-					{	
-						buffer += c;
-						state = State::exponent_digit_sequence;
-					} else if (isspace(c))
-					{
-						// do not add to buffer
-						state = State::end;
-					} else {
-						// nothing matched, ERROR
-						state = State::fail;
-					}
-
-					cout << "exponent_digit_sequence, buffer: " << buffer << endl;		
-					return false;
-					
-					
-				default:
-					state = State::fail;
-					cout << "fail state, buffer: " << buffer << endl;
-			}	
-			return true;
-		}
-	};
 	
 	void printStack(std::stack<double> &s)
 	{
@@ -440,29 +333,15 @@ namespace Forth
 		{
 			if (s.which() == 1)
 			{
-				cout << "Number: " << s.get<double>(s) << endl;
+				cout << "Number: " << get<double>(s) << endl;
+			}
+			if (s.which() == 2)
+			{
+				cout << "String: " << get<string>(s) << endl;
 			}
 		}
 				
 		
-	/*	cout << "ok." << endl;
-		
-		MaybeDouble d1;
-		double d;
-		stack<double> s;
-		bool newline = false;
-		
-		while (inp)
-		{
-//			inp >> d;
-			d1 = nextToken(inp, newline);
-			if (d1)
-			{
-				s.push(d.get());
-			}
-			printStack(s);
-		}		
-	*/	
 		return true;	
 	}
 }

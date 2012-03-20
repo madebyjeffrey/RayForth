@@ -11,6 +11,7 @@
 
 #include "geometry.hpp"
 
+template<class... Object>
 class Scene 
 { 
 	std::list<Object> objects;
@@ -25,7 +26,7 @@ public:
 	void addObjects(const Object& t, const Object&... ts)
 	{
 		objects.push_back(t);
-		addObjects(ts);
+		addObjects(ts...);
 	}
 
 	Scene(const Object&... ts) : objects(sizeof...(ts)) 
