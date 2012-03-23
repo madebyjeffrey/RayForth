@@ -13,7 +13,7 @@ link_directories("/usr/local/lib" "/opt/local/lib")
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -std=c++11  -g -Wall -Wextra -Wno-unused-parameter -Wno-missing-braces")
 
 include_directories("include")
-add_executable(ray src/geometry.cpp src/linear_algebra.cpp src/main.cpp src/rayforth.cpp)
+add_executable(ray src/geometry.cpp src/linear_algebra.cpp src/main.cpp src/rayforth.cpp src/forthparse.cpp)
 target_link_libraries(ray "gd")
 
 

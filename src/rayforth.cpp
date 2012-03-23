@@ -14,333 +14,186 @@
 
 #include <boost/variant.hpp>
 #include <boost/variant/get.hpp>
+#include <boost/variant/static_visitor.hpp>
 
+#include "rayforth.hpp"
+#include "rayforth_util.hpp"
+
+#include "linear_algebra.hpp"
 
 namespace Forth
 {
-	//struct Symbol
-//	{
-//		std::string name;	
-//	};
-	// bool if no token,
-	// double if it is a double
+	using Stack = std::vector<Generic>;
+	
+	Stack &&vec3(Stack &&stack)
+	{
+		using namespace boost;
+		
+		double z = get<double>(pop(stack));
+		double y = get<double>(pop(stack));
+		double x = get<double>(pop(stack));		
+		
+		Math::Vec3 v = Math::vec3(x,y,z);
 
+		push(stack, v);
 
-	using Token = boost::variant<bool, double, std::string>; //, Symbol>;
-	
-	enum struct State
-	{
-		neutral,
-		number,
-		sign, 
-		digit_sequence,
-		decimal_after_digits,
-		decimal_before_digits,
-		exponent,
-		digit_sequence_after_decimal,
-		exponent_sign,
-		exponent_digit_sequence,
-		fail,
-		
-		// strings
-		string_start,
-		string_text,
-		string_escape,
-		string_escaped,
-		string,
-		
-		// symbols
-		//symbol_char,
-//		symbol,
-		
-	};
-	
-	std::map<State, std::string> names
-	{
-		{ 	State::neutral, "neutral" },
-		{	State::number,	"Number" },
-		{	State::sign, "sign" },
-		{	State::digit_sequence, "digit_sequence" },
-		{	State::decimal_after_digits, "decimal_after_digits" },
-		{	State::decimal_before_digits, "decimal_before_digits" },
-		{	State::exponent, "exponent" },
-		{	State::digit_sequence_after_decimal, "digit_sequence_after_decimal" },
-		{	State::exponent_sign,	"exponent_sign" },
-		{	State::exponent_digit_sequence, "exponent_digit_sequence" },
-		{	State::fail, "fail" },
-		
-		{ 	State::string_start, "string_start" },
-		{	State::string_text, "string_text" },
-		{	State::string_escape, "string_escape" },
-		{	State::string_escaped, "string_escaped" },
-		{   State::string, "string" },
-		
-//		{	State::symbol_char, "symbol_char" },
-//		{	State::symbol, "symbol" },
-	};
-	
-	bool isDigit(char c)
-	{
-		return (c >= '0') & (c <= '9');
+		return std::move(stack);
 	}
 	
-	bool isSign(char c)
+	bool add(std::vector<Generic> &stack)
 	{
-		return (c == '+') | (c == '-');
-	}
-	
-	bool isExponent(char c)
-	{
-		return (c == 'e') | (c == 'E');
-	}
-	
-	bool isDecimal(char c)
-	{
-		return (c == '.');
-	}
-	
-	bool isSpace(char c) 
-	{
-		return (c == ' ');
-	}
-	
-	// is it a double quote?
-	bool isQuote(char c)
-	{
-		return (c == '\"');
-	}
-	
-	// is it printable, but not a backslash or double quote
-	bool isPrintableRestricted(char c)
-	{
-		return (c != '\\' && c != '\"' && (c >= 32 && c < 127));
-	}
-	
-	// is it printable, including backslash or double quote
-	bool isPrintable(char c)
-	{
-		return (c >= 32 && c < 127);
-	}
-	
-	bool isBackslash(char c)
-	{
-		return (c == '\\');
-	}
-	
-//	bool isPrintableButNotNumber(char c)
-//	{
-//		return (c >= 32 && c < '0') || (c > '9' && c < 127);
-//	}
-	
-/*	bool isNarrowPrintable(char c)
-	{
-		return isPrintable(c) && !isSign(c) && !isDigit(c) && !isQuote(c);
-//			&& !isDecimal(c);
-	}*/
-/*	
-	bool isNotDigitButPrintable(char c)
-	{
-		return isPrintable(c) && !isDigit(c);
-	}
-*/
-	using Predicate = bool(*)(char);
-	using StateTransferList = std::map<Predicate, State>;
-	using TransferTable = std::map<State, StateTransferList>;
-
-	TransferTable table 
-	{
-		{ State::neutral, 
-			{	
-				{ isSign, State::sign },
-				{ isDigit, State::digit_sequence },
-				{ isDecimal, State::decimal_before_digits },
-				{ isSpace, State::neutral },
-				{ isQuote, State::string_start }
-			} },
-		{ State::sign, 
-			{
-				{ isDigit, State::digit_sequence },
-				{ isDecimal, State::decimal_before_digits }
-			} },
-		{ State::digit_sequence,
-			{
-				{ isDigit, State::digit_sequence },
-				{ isExponent, State::exponent },
-				{ isDecimal, State::decimal_after_digits },
-				{ isSpace, State::number }
-			} },
-		{ State::decimal_after_digits,
-			{
-				{ isDigit, State::digit_sequence_after_decimal },
-				{ isExponent, State::exponent },
-				{ isSpace, State::number }
-			} },
-		{ State::decimal_before_digits,
-			{	
-				{ isDigit, State::digit_sequence_after_decimal },
-				{ isExponent, State::exponent }
-			} },
-		{ State::digit_sequence_after_decimal,
-			{
-				{ isDigit, State::digit_sequence_after_decimal },
-				{ isExponent, State::exponent },
-				{ isSpace, State::number },
-			} },
-		{ State::exponent,
-			{
-				{ isSign, State::exponent_sign },
-				{ isDigit, State::exponent_digit_sequence }
-			} },
-		{ State::exponent_sign,
-			{
-				{ isDigit, State::exponent_digit_sequence }
-			} },
-		{ State::exponent_digit_sequence,
-			{
-				{ isDigit, State::exponent_digit_sequence },
-				{ isSpace, State::number }
-			} } ,
-			
-		// strings
-		{ State::string_start,
-			{
-				{ isPrintableRestricted, State::string_text },
-			 	{ isQuote, State::string }
-			} },
-		{ State::string_text,
-			{
-				{ isPrintableRestricted, State::string_text },
-				{ isBackslash, State::string_escape },
-				{ isQuote, State::string }
-			} },
-		{ State::string_escape,
-			{
-				{ isPrintable, State::string_escaped },
-			}},
-		{ State::string_escaped,
-			{
-				{ isBackslash, State::string_escape },
-				{ isPrintableRestricted, State::string_text },
-				{ isQuote, State::string }
-			}}
-		};
-			
-	struct Parser
-	{
-		TransferTable t;
-		State state = State::neutral;
-		std::string buffer = "";
-		size_t index = 0;
-		
-		Parser(TransferTable t_) : t(t_) {};
-		
-		Token operator()(char c)
+		using namespace boost;
+		if (stack.back().which() == 0)
 		{
-			bool fail = true;
-			++index;
+			double a1 = get<double>(stack.back()); stack.pop_back();
+			double a2 = get<double>(stack.back()); stack.pop_back();
+			stack.push_back(a1 + a2);	
 			
-			std::cout << names.at(state) << " -> ";
-			
-			try
-			{
-				StateTransferList st = t.at(state);
+			return true;
+		}
+		else
+			return false;
+	}
+	
+	bool print(std::vector<Generic> &stack)
+	{
+		using namespace boost;
+		if (stack.size() == 0) return false;
 
-				for (auto i = begin(st); i != end(st); ++i)
-				{
-					if (i->first(c))
-					{	
-						state = ((*i).second);
-						buffer += c;
-						fail = false;
-						break;				// first match wins
-					}
-				}
-			}
+		Generic d = stack.back(); stack.pop_back();
+		
+		boost::apply_visitor(echo(std::cout), d);
+				
+		return true;
+	}
+	
+	bool cr(std::vector<Generic>&)
+	{
+		std::cout << std::endl;
+		return true;
+	}
+	
+	bool swap(std::vector<Generic>&s)
+	{
+		if (s.size() >= 2)
+		{
+			Generic a,b;
+			a = s.back(); s.pop_back();
+			b = s.back(); s.pop_back();
 			
+			s.push_back(a);
+			s.push_back(b);
+		}
+		return true;
+	}
+	
+	bool drop(std::vector<Generic>&s)
+	{
+		if (s.size() >= 1)
+			s.pop_back();
+		return true;
+	}
+	
+	std::map<std::string, std::function<bool(std::vector<Generic>&)>> words
+	{
+		{"+", add},
+		{".", print},
+		{"cr", cr},
+		{"swap", swap},
+		{"drop", drop},
+		{"vec3", vec3},
+	};
+	
+	
+	
+	struct _process : public boost::static_visitor<bool>
+	{
+		std::vector<Generic> &stack;	
+		
+		_process(std::vector<Generic> &s) : stack(s) {} 
+		
+		bool operator()(double d)  const
+		{
+			stack.push_back(d);
+			return true;			
+		}
+		
+		bool operator()(std::string s) const
+		{
+			stack.push_back(s);
+			return true;
+		}
+		
+		bool operator()(Symbol s) const
+		{
+			try 
+			{
+				auto n = words.at(s.name);
+				return n(stack);
+				return false;
+			}
 			catch (std::out_of_range)
 			{
-				std::cout << "Inconsistent State at index " << index << std::endl;
+				std::cerr << "\nRuntime Error: " << s.name << " not found in dictionary." << std::endl;
+				
+				return false;
 			}
-			
-			std::cout << names.at(state) << std::endl;
-			std::cout << " buffer: " << buffer << std::endl;
-
-			if (state == State::number)
-			{
-				double d = stod(buffer);
-				buffer = "";
-				state = State::neutral;
-				return d;
-			}
-			
-			if (state == State::string)
-			{
-				std::string d = buffer;
-				buffer = "";
-				state = State::neutral;
-				return d;
-			}
-
-			if (fail)
-			{
-//				return false;	
-				throw std::string("unfortunate.");
-			}
-			
-
-			return false;
 		}
 	};
-		
-				
 	
-	void printStack(std::stack<double> &s)
+	struct ForthMachine
 	{
-		using namespace std;
+		std::vector<Generic> stack;
 		
-		cout << "Elements in stack: " << s.size() << endl;
-	}
+		void printStack() const
+		{
+			std::cout << "Stack: " << stack.size() << " items" << std::endl;
+			for (Generic g : stack)
+			{
+//				std::cout << g << std::endl;
+				boost::apply_visitor(echo(std::cout), g);
+			}
+		}
+		
+		bool process(Token &g)
+		{
+			return boost::apply_visitor( _process(stack), g );
+		}
+	};
+	
+	using namespace std::placeholders;
+	
+	using testfunc = decltype(std::make_pair<double, double>);
 	
 	bool executeForth(std::istream &inp)
 	{
 		using namespace std;
 		
+		list<Token> ts;
 		
+		ForthMachine fm, saved;
 		
 		string s;
-		getline(inp, s);
-
-		s += "  "; // some extra to flush out the State
-				
-		cout << "Parsing: >>" << s << "<<" << endl;
-		
-		list<Token> t;
-
-//		transform(begin(s), end(s), back_inserter(t), NumberEval());
-		transform(begin(s), end(s), back_inserter(t), Parser(table));
-		
-		list<Token> trimmed;
-		for (Token s : t)
+		while (getline(inp, s))
 		{
-			if (s.which() != 0)
+			saved = fm;
+			
+			ts = tokenize(s);
+			
+			for (Token t : ts)
 			{
-				trimmed.push_back(s);
+				if (!fm.process(t))
+				{
+					// restore stack.
+					fm = saved;
+					std::cerr << "stack restored." << std::endl;
+					break;
+				}
 			}
+			cerr << "  ok" << endl;
 		}
 		
-		cout << "tokens found:" << endl;
-		for (Token s : trimmed)
-		{
-			if (s.which() == 1)
-			{
-				cout << "Number: " << get<double>(s) << endl;
-			}
-			if (s.which() == 2)
-			{
-				cout << "String: " << get<string>(s) << endl;
-			}
-		}
-				
+		fm.printStack();
 		
 		return true;	
 	}

@@ -191,7 +191,7 @@ std::array<T, n> operator /(std::array<T, n> a, T const b)
 
 	return a;
 }
-
+/*
 template<typename T, size_t n>
 std::ostream& operator<<(std::ostream& os, std::array<T, n> const& arr) 
 {
@@ -205,7 +205,33 @@ std::ostream& operator<<(std::ostream& os, std::array<T, n> const& arr)
 	return  os << (int)arr.back() << " ]";
 }
 
+template<typename T, size_t n>
+std::ostream& operator<<(std::ostream& os, std::array<T, n> const arr) 
+{
+	os << "[ ";
+//	std::copy(std::begin(arr), std::end(arr)-1, std::ostream_iterator<T>(os, ", "));
+	for (auto it = std::begin(arr); it != (std::end(arr) - 1); ++it)
+	{
+		os << (int)*it << ", ";
+	}
 
+	return  os << (int)arr.back() << " ]";
+}*/
+
+template <class T, size_t n>
+std::ostream& 
+	operator<<(std::ostream& os, 
+			   const std::array<T, n>& a)
+{
+	os << "[ ";
+	//	std::copy(std::begin(arr), std::end(arr)-1, std::ostream_iterator<T>(os, ", "));
+	for (auto it = std::begin(a); it != (std::end(a) - 1); ++it)
+	{
+		os << (int)*it << ", ";
+	}
+
+	return  os << (int)a.back() << " ]";
+}
 	
 	
 #endif
