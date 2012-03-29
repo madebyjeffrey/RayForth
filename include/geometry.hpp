@@ -118,17 +118,59 @@ namespace Object
     auto test_intersection(Sphere s, Ray r) -> MaybeIntersection;
     auto test_intersection(Triangle s, Ray r) -> MaybeIntersection;
     
+
     struct intersection : public boost::static_visitor<MaybeIntersection>
     {
-        auto operator()(Ray &r, Sphere &s) -> MaybeIntersection
+        Ray &r;
+        
+        intersection(Ray &r_) : r(r_) {}
+        
+        auto operator()(Sphere const &s) const -> MaybeIntersection 
         {
             return test_intersection(s, r);
         }
         
-        auto operator()(Ray &r, Triangle &t) -> MaybeIntersection
+        auto operator()(Triangle const &t) const -> MaybeIntersection
         {
             return test_intersection(t, r);
         }
+        
+        // catch ... 
+        template<typename T>
+        auto operator()(T const &) const -> MaybeIntersection
+        {
+            return nullIntersection();
+        }
     };
+
 }
+    
+template <class C, class Traits>
+std::basic_ostream<C, Traits> &
+    operator<<(std::basic_ostream<C, Traits> &os, 
+               const Object::Sphere & a)
+{
+    auto centre = std::get<0>(a);
+    float radius = std::get<1>(a);
+    
+    os << "<" << centre << "/" << radius << ">";
+    return os;
+}
+
+template <class C, class Traits>
+std::basic_ostream<C, Traits> &
+    operator<<(std::basic_ostream<C, Traits> & os, 
+               const Object::Triangle & a)
+{
+    auto v1 = std::get<0>(a);
+    auto v2 = std::get<1>(a);
+    auto v3 = std::get<2>(a);
+
+    os << "<" << v1 << ", " << v2 << ", " << v3 << ">";
+    
+    return os;
+}
+
+
+
 #endif

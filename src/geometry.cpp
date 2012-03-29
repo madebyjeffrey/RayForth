@@ -70,6 +70,7 @@ auto test_intersection(Sphere s, Ray r) -> MaybeIntersection
     return nullIntersection();
 }
 
+// Fancy math to test a triangle intersection
 auto test_intersection(Triangle s, Ray r) -> MaybeIntersection
 {
     using namespace Math;
@@ -90,26 +91,13 @@ auto test_intersection(Triangle s, Ray r) -> MaybeIntersection
     // Triangle normal
     Vec3 n = cross(u, v);
     
-//    float t = dot(n, a - e) / dot(n, d);
     float t = dot(n, a - e) / dot(n, d);
     
     float sigma = dot(w, cross(n, v)) / dot(u, cross(n, v));
     float tau  = dot(w, cross(n, u)) / dot(v, cross(n, u));
-    
-//    float beta = dot(u, v) * dot(w, v) - dot(v,v)*dot(w, u);
-//    float gamma = dot(u, v) * dot(w, u) - dot(u,u)*dot(w, v);
-//    float divisor = pow(dot(u, v), 2) - dot(u, u) * dot(v, v);
-//    beta /= divisor;
-//    gamma /= divisor;
-    
-    
 
-//    Vec3 ap = p - a;  
-//    if (beta + gamma <= 1.0)
     if ((sigma >= 0) and (tau >= 0) and (sigma + tau <= 1.0))
     {
-    //if (sigma + tau <= 1.0)
-//    {
         Vec3 p = e - t * d;
         float theta = acos(dot(d, n)) / (norm(d) * norm(n));
 

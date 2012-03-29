@@ -11,184 +11,156 @@
 #include <list>
 #include <utility>
 #include <map>
+#include <sstream>
 
 #include <boost/variant.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/variant/static_visitor.hpp>
 
-#include "rayforth.hpp"
-#include "rayforth_util.hpp"
+#include "forth.hpp"
+#include "forth_words.hpp"
 
 #include "linear_algebra.hpp"
 
 namespace Forth
 {
-	using Stack = std::vector<Generic>;
-	
-	Stack &&vec3(Stack &&stack)
-	{
-		using namespace boost;
-		
-		double z = get<double>(pop(stack));
-		double y = get<double>(pop(stack));
-		double x = get<double>(pop(stack));		
-		
-		Math::Vec3 v = Math::vec3(x,y,z);
-
-		push(stack, v);
-
-		return std::move(stack);
-	}
-	
-	bool add(std::vector<Generic> &stack)
-	{
-		using namespace boost;
-		if (stack.back().which() == 0)
-		{
-			double a1 = get<double>(stack.back()); stack.pop_back();
-			double a2 = get<double>(stack.back()); stack.pop_back();
-			stack.push_back(a1 + a2);	
-			
-			return true;
-		}
-		else
-			return false;
-	}
-	
-	bool print(std::vector<Generic> &stack)
-	{
-		using namespace boost;
-		if (stack.size() == 0) return false;
-
-		Generic d = stack.back(); stack.pop_back();
-		
-		boost::apply_visitor(echo(std::cout), d);
-				
-		return true;
-	}
-	
-	bool cr(std::vector<Generic>&)
-	{
-		std::cout << std::endl;
-		return true;
-	}
-	
-	bool swap(std::vector<Generic>&s)
-	{
-		if (s.size() >= 2)
-		{
-			Generic a,b;
-			a = s.back(); s.pop_back();
-			b = s.back(); s.pop_back();
-			
-			s.push_back(a);
-			s.push_back(b);
-		}
-		return true;
-	}
-	
-	bool drop(std::vector<Generic>&s)
-	{
-		if (s.size() >= 1)
-			s.pop_back();
-		return true;
-	}
-	
-	std::map<std::string, std::function<bool(std::vector<Generic>&)>> words
+	// All of the words defined
+	std::map<std::string, std::function<Status(Stack &)>> words
 	{
 		{"+", add},
+		{"-", minus},
+		{"*", product},
+		{"/", divide},
+		{"%", mod},
 		{".", print},
 		{"cr", cr},
 		{"swap", swap},
 		{"drop", drop},
 		{"vec3", vec3},
+		{"bye", bye},
+		{".s", print_stack},
+		{"make-sphere", makeSphere},
+		{"make-triangle", makeTriangle},
+		{"render-scene", renderScene},
 	};
 	
-	
-	
-	struct _process : public boost::static_visitor<bool>
+	// This defines what to do with each kind of token
+	struct _process : public boost::static_visitor<Status>
 	{
-		std::vector<Generic> &stack;	
+		Stack &stack;	
 		
-		_process(std::vector<Generic> &s) : stack(s) {} 
+		_process(Stack &s) : stack(s) {} 
 		
-		bool operator()(double d)  const
+		Status operator()(double d)  const
 		{
-			stack.push_back(d);
-			return true;			
+			push(stack, d);
+//			stack.push_back(d);
+//			return true;			
+			return std::make_tuple(true, "");
 		}
 		
-		bool operator()(std::string s) const
+		Status operator()(std::string s) const
 		{
-			stack.push_back(s);
-			return true;
+//			stack.push_back(s);
+			push(stack, s);
+			return std::make_tuple(true, "");
+//			return true;
 		}
 		
-		bool operator()(Symbol s) const
+		Status operator()(Symbol s) const
 		{
+
 			try 
 			{
+				Stack backup = stack;
+				
 				auto n = words.at(s.name);
-				return n(stack);
-				return false;
+				Status x = n(stack);
+				
+				if (std::get<0>(x) == false)
+				{
+					stack = backup; // restore stack
+				}
+				
+				return x;
+				
+//				return stack;
 			}
 			catch (std::out_of_range)
 			{
-				std::cerr << "\nRuntime Error: " << s.name << " not found in dictionary." << std::endl;
+				std::stringstream ss;
 				
-				return false;
+				ss << "\nRuntime Error: " << s.name << " not found in dictionary.";
+				
+				std::string str = ss.str();
+
+				return std::make_tuple(false, str);
 			}
 		}
 	};
 	
 	struct ForthMachine
 	{
-		std::vector<Generic> stack;
+		Stack stack {};
 		
 		void printStack() const
 		{
-			std::cout << "Stack: " << stack.size() << " items" << std::endl;
+			int i = stack.size();
+
 			for (Generic g : stack)
 			{
-//				std::cout << g << std::endl;
-				boost::apply_visitor(echo(std::cout), g);
+				std::cerr << i << "  ";
+				boost::apply_visitor(echoTypes(std::cerr), g);
+				i--; std::cerr << std::endl;
 			}
+			std::cerr << std::endl;
 		}
 		
-		bool process(Token &g)
+		// Proxy over to the real processing
+		Status process(Token &g)
 		{
 			return boost::apply_visitor( _process(stack), g );
 		}
 	};
 	
-	using namespace std::placeholders;
-	
-	using testfunc = decltype(std::make_pair<double, double>);
 	
 	bool executeForth(std::istream &inp)
 	{
 		using namespace std;
 		
-		list<Token> ts;
+		vector<Token> ts;
 		
-		ForthMachine fm, saved;
+		Stack stack;
+		
+		ForthMachine fm, saved;	// the stack will be saved for restoration if any problems occur in processing
 		
 		string s;
 		while (getline(inp, s))
 		{
 			saved = fm;
 			
-			ts = tokenize(s);
+			ts = tokenize(s);									// 1. Tokenize
 			
-			for (Token t : ts)
+			for (Token t : ts)									// 2. For Each Token
 			{
-				if (!fm.process(t))
+				Status status = fm.process(t);					//		Execute
+				
+				if (get<0>(status) == false) // error occurred	// 		Check for some error
 				{
-					// restore stack.
-					fm = saved;
+					std::cerr << get<1>(status) << std::endl;	//		Output the debug info
+					std::cerr << "Stack trace: " << std::endl;
+					fm.printStack();
+					
+					fm = saved;									//		Restore the Stack
+					
 					std::cerr << "stack restored." << std::endl;
 					break;
 				}
+				else
+					if (get<1>(status) == "bye")				//		Check for user exit
+					{
+						break;
+					}	
 			}
 			cerr << "  ok" << endl;
 		}

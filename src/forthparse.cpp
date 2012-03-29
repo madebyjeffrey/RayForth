@@ -3,17 +3,16 @@
 #include <string>
 #include <algorithm>
 #include <stdexcept>
+#include <vector>
 
 #include <boost/variant.hpp>
 #include <boost/variant/get.hpp>
 
-
-#include "rayforth.hpp"
-
-
+#include "forth.hpp"
 
 namespace Forth
 {
+	// All of the states
 	enum struct State
 	{
 		neutral,
@@ -41,9 +40,7 @@ namespace Forth
 
 	};
 
-//#define ENTRY(name)    { State::name, #name },
-
-
+	// All the states and names
 	std::map<State, std::string> names
 	{
 		{ 	State::neutral, "neutral" },
@@ -67,8 +64,6 @@ namespace Forth
 		{	State::symbol_char, "symbol_char" },
 		{	State::symbol, "symbol" },
 	};
-
-#undef ENTRY
 
 	bool isDigit(char c)
 	{
@@ -143,6 +138,7 @@ namespace Forth
 	using StateTransferList = std::map<Predicate, State>;
 	using TransferTable = std::map<State, StateTransferList>;
 
+	// State machine description for transferring states
 	TransferTable table 
 	{
 		{ State::neutral, 
@@ -232,9 +228,10 @@ namespace Forth
 			}}
 		};
 
-
+//	Should add something like this to help processing
 //	Token operation(string &buffer, char c)	
 
+	// Processes the state machine description above with special handling
 	struct Parser
 	{
 		TransferTable t;
@@ -282,12 +279,9 @@ namespace Forth
 			}
 
 			if (state == State::number)
-			{/*
-				std::istringstream buf(buffer);
-				double d;
-				if (buf >> d)
-				{
-				}*/
+			{
+				// This will crash the program if there is an invalid number passed 
+				// to it.
 				double d = stod(buffer);
 				buffer = "";
 				state = State::neutral;
@@ -296,7 +290,8 @@ namespace Forth
 
 			if (state == State::string)
 			{
-				std::string d = buffer;
+				// Remove the quotes surrounded by it.
+				std::string d = buffer.substr(1, buffer.size() - 2);
 				buffer = "";
 				state = State::neutral;
 				return d;
@@ -314,7 +309,6 @@ namespace Forth
 
 			if (fail)
 			{
-//				return false;	
 				throw std::string("unfortunate.");
 			}
 
@@ -323,7 +317,8 @@ namespace Forth
 		}
 	};
 	
-	std::list<Token> tokenize(std::string const &s, bool debug)
+	// String in, Tokens out
+	std::vector<Token> tokenize(std::string const &s, bool debug)
 	{
 		using namespace std;
 		
@@ -332,11 +327,13 @@ namespace Forth
 		if (debug)
 			cout << "Parsing: >>" << s << "<<" << endl;
 		
-		list<Token> t;
+		vector<Token> t;
 		
+		// Runs the string through the state machine a character at a time
 		transform(begin(str), end(str), back_inserter(t), Parser(table));
 		
-		list<Token> trimmed;
+		// Remove any instances of bool that we don't need
+		vector<Token> trimmed;
 		for (Token s : t)
 		{
 			if (s.which() != 0)

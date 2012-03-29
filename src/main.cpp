@@ -8,7 +8,6 @@
 #include <fstream>
 #include <istream>
 #include <exception>
-//#include <glm/glm.hpp>
 #include <array>
 
 #include <boost/program_options.hpp>
@@ -16,15 +15,12 @@
 
 #include "geometry.hpp"
 
-#include "rayforth.hpp"
+#include "forth.hpp"
 
 namespace po = boost::program_options;
 
-#include "gd.h"
-
 int main(int argc, char const * const * const argv)
 {
-    
     using namespace std;
     using namespace boost::filesystem;
     
@@ -103,6 +99,10 @@ int main(int argc, char const * const * const argv)
         cerr << "error\n";
     }
     
+    cerr << "RayForth 0.3  Copyright (C) 2012 Jeffrey Drake\n";
+    cerr << "RayForth comes with absolutely no warranty.\n";
+    cerr << "Type 'bye' to exit." << endl;
+    
     // process
     Forth::executeForth(*input);
     
@@ -111,86 +111,8 @@ int main(int argc, char const * const * const argv)
         delete input;
     }
     
+    if (prompt) {} // eliminate warnings
 
-    
-    
-    /*
-    
-    std::cout << "Ray A1" << std::endl;
-    
-    std::vector<Object::MaybeIntersection> image;
-    unsigned width = 640;
-    unsigned height = 640;
-    unsigned total = width * height;
-    image.reserve(total);
-    Math::Vec3 direction = Math::vec3(0, 0, 1.0);
-    
-//    auto object = Object::makeSphere(Math::vec3(0.5, 0.5, 0.5), 0.25);
-    auto object = Object::makeTriangle(Math::vec3(0.45, 0.45, 0.5),
-                                       Math::vec3(0.55, 0.45, 0.5),
-                                       Math::vec3(0.65, 0.55, 0.5));
-    
-    for (unsigned i = 0; i != total; ++i)
-    {
-//        std::cout << "Hit testing: " << 
-//            static_cast<int>((static_cast<float>(i+1) / static_cast<float>(total)) * 100) << "%\r";
-        unsigned x = i % width;
-        unsigned y = (height - i / width);
-        
-        float fx = static_cast<float>(x) / static_cast<float>(width);
-        float fy = static_cast<float>(y) / static_cast<float>(height);
-        
-        auto r = Object::makeRay(Math::vec3(fx, fy, 0.0f), direction);
-        auto is = Object::test_intersection(object, r);
-        
-        image.push_back(is);
-    }
-    
-    // output boolean hit test
-    std::vector<int> boolimg(image.size());
-    std::transform(std::begin(image), std::end(image),
-        std::begin(boolimg), Object::intersection_index);
-        
-    gdImagePtr im2 = gdImageCreate(width, height);
-    int black = gdImageColorAllocate(im2, 0, 0, 0);
-    int white = gdImageColorAllocate(im2, 255, 255, 255);
-    
-    for (unsigned x = 0; x != width; ++x)
-        for (unsigned y = 0; y != height; ++y)
-        {
-            gdImageSetPixel(im2, x, y, (boolimg[y*width+x] == 0 ? black : white));
-        }
-    
-    FILE *out = fopen("output2.png", "wb");
-    gdImagePngEx(im2, out, 9);
-    fclose(out);
-    gdImageDestroy(im2);
-
-
-    // output gray scale 
-    std::vector<std::array<uint8_t, 3>> boolgs(image.size());
-    std::transform(std::begin(image), std::end(image),
-        std::begin(boolgs), Object::intersection_colour);
-        
-    gdImagePtr im3 = gdImageCreateTrueColor(width, height);
-
-    for (unsigned x = 0; x != width; ++x)
-        for (unsigned y = 0; y != height; ++y)
-        {
-            std::array<uint8_t, 3> c = boolgs[y * width + x];
-//            if (c[0] != 0)
-//                std::cerr << "Colour: " << c << std::endl;
-            int colour = gdImageColorAllocate(im3, c[0], c[1], c[2]);
-            gdImageSetPixel(im3, x, y, colour);
-        }
-    
-    FILE *out2 = fopen("output3.png", "wb");
-    gdImagePngEx(im3, out2, 9);
-    fclose(out2);
-    gdImageDestroy(im3);
-
-
- */ 
     std::cout << std::endl;
  
     return 0;
