@@ -23,9 +23,9 @@ namespace Math
 	feq(T const a, T const b)
 	{
 		const int ulp = 2;
-		return (std::abs(a - b) <= std::numeric_limits<T>::epsilon()
+		return (std::abs(a - b) <= std::numeric_limits<T>::epsilon()   // e * max will be the maximum relative error
 							*  std::max(std::abs(a), std::abs(b))
-							*  ulp);
+							*  ulp);  // this should not be a constant? (see nextafter(3))
 	}	
 
 	template<typename T, size_t n>

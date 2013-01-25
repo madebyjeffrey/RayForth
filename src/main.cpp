@@ -14,6 +14,7 @@
 #include <boost/filesystem.hpp>
 
 #include "geometry.hpp"
+#include "linear_algebra.hpp"
 
 #include "forth.hpp"
 
@@ -21,6 +22,25 @@ namespace po = boost::program_options;
 
 int main(int argc, char const * const * const argv)
 {
+    using namespace std;
+    
+    auto t = Object::makeTriangle(Math::vec3(0, -.6, 11), 
+                                    Math::vec3(-.5, -.5, 11),
+                                    Math::vec3(0.5, -.5, 11));
+                                    
+    auto r = Object::makeRay(Math::vec3(0.0, 0.0, 0.0),
+                             Math::vec3(0.0, 0.0, 1.0));
+                             
+    auto mi = Object::test_intersection(t, r);
+
+    if (get<0>(mi))
+    {
+        cout << "Have intersection: " << get<1>(mi) << endl;
+    }
+    else
+        cout << "No intersection" << endl;
+    
+#if 0
     using namespace std;
     using namespace boost::filesystem;
     
@@ -114,6 +134,6 @@ int main(int argc, char const * const * const argv)
     if (prompt) {} // eliminate warnings
 
     std::cout << std::endl;
- 
+ #endif
     return 0;
 }

@@ -170,7 +170,22 @@ std::basic_ostream<C, Traits> &
     
     return os;
 }
+/*
+template <class C, class Traits>
+std::basic_ostream<C, Traits> &
+    operator<<(std::basic_ostream<C, Traits> & os, 
+               const Object::Intersection & a)
+{
+//    auto v1 = std::get<0>(a);
+//    auto v2 = std::get<1>(a);
+//    auto v3 = std::get<2>(a);
 
+    os << "intersection: " << get<0>(a) << " angle: " << get<1>(a);
+//    os << "<" << v1 << ", " << v2 << ", " << v3 << ">";
+
+    return os;
+}
+*/
 
 
 #endif

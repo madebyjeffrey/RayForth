@@ -1,0 +1,41 @@
+
+RayForth: A Forth and Ray Caster Implemented in C++
+
+Jeffrey Drake
+25 Mar 2012
+
+Copyright 2012 By Jeffrey Drake
+Licensed under the Apache 2.0 license.
+Details in LICENSE.
+
+This is a project done for a C++ class at the University of Windsor. 
+
+Excerpt from the paper (RayForth.pdf) describing the details:
+
+Introduction:
+
+RayForth started out as a simple attempt to make a ray tracer. In the process
+of building the ray tracer, a method of decoupling the definition of the scene
+from the compiled source, or more more simply, a configuration file.
+
+In evaluating the various means to parse a configuration file language, Boost 
+Spirit was the top thing on the list, but it did not seem like there would be 
+enough time to learn it well enough. The idea of implementing a Forth came
+with the thoughts of the utmost simplest way of representing data.
+
+A Forth is a postfix oriented concatenative programming language where its
+simplest expression is a series of numbers progressively put on a stack and
+function calls to consume them and put a result back on the stack.
+
+For further information, please see RayForth.pdf.
+
+Some points of interest: When I was creating the forth part of this project,
+I did not know anything previously about finite automata, except for using
+it to implement a counter in electronics. 
+
+So using the concept of a state machine from my electronics courses, I designed
+a rather complex state machine with all the transitions (shown on page 8 of PDF).
+
+Now that I am taking a compilers course, I realize that this is in fact a DFA. 
+It was very enlightening to learn more about this stuff after the fact. But I 
+do not think I would want to make another one of these myself.
