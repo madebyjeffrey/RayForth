@@ -22,8 +22,11 @@ namespace po = boost::program_options;
 
 int main(int argc, char const * const * const argv)
 {
-    using namespace std;
+
+#if 0	
+	using namespace std;
     
+
     auto t = Object::makeTriangle(Math::vec3(0, -.6, 11), 
                                     Math::vec3(-.5, -.5, 11),
                                     Math::vec3(0.5, -.5, 11));
@@ -39,8 +42,9 @@ int main(int argc, char const * const * const argv)
     }
     else
         cout << "No intersection" << endl;
-    
-#if 0
+#endif
+
+#if 1
     using namespace std;
     using namespace boost::filesystem;
     
