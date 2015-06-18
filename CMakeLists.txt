@@ -5,7 +5,7 @@ ENABLE_TESTING()
 
 project(ray)
 
-link_directories("/usr/local/lib" "/opt/local/lib")
+link_directories("/usr/local/lib")
 
 # -stdlib=libc++
 # -Werror

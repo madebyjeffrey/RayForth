@@ -8,6 +8,8 @@
 #include <iostream>
 #include <iterator>
 #include <cmath>
+#include <vector>
+#include <numeric>
 
 namespace Math
 {
@@ -55,12 +57,6 @@ namespace Math
 		return temp;
 	}
 	
-	template<typename T, size_t n>
-	T distance(std::array<T, n> const a, std::array<T, n> const b)
-	{
-		return norm(a - b);
-	}
-	
 	template<typename T>
 	std::array<T, 3> cross(std::array<T, 3> a, std::array<T, 3> b)
 	{
@@ -95,6 +91,14 @@ std::array<T, n> operator -(std::array<T, n> const a, std::array<T, n> const b)
 	return temp;
 }
 
+namespace Math {
+	template<typename T, size_t n>
+	T distance(std::array<T, n> const a, std::array<T, n> const b)
+	{
+		return norm(a - b);
+	}
+	
+}
 
 template<typename T, size_t n>
 std::array<T, n> operator +(std::array<T, n> const a, std::array<T, n> const b)
